@@ -1,0 +1,128 @@
+// AD AGENCY BUDGET MANAGEMENT SYSTEM
+// High-level pseudo-code overview
+
+// DATA STRUCTURES
+
+Brand {
+    id: Integer (primary key)
+    name: String
+    daily_budget: Float
+    monthly_budget: Float
+    daily_spend: Float (default 0.0)
+    monthly_spend: Float (default 0.0)
+    campaigns: List<Campaign> (one-to-many relationship)
+}
+
+Campaign {
+    id: Integer (primary key)
+    name: String
+    brand_id: Integer (foreign key referencing Brand)
+    is_active: Boolean (default true)
+    use_dayparting: Boolean (default false)
+    start_hour: Time (nullable)
+    end_hour: Time (nullable)
+    brand: Brand (many-to-one relationship)
+}
+
+// KEY ALGORITHMS
+
+// 1. RECORD CAMPAIGN SPEND
+function recordCampaignSpend(campaign_id, amount):
+    campaign = findCampaign(campaign_id)
+    if campaign exists and campaign.is_active:
+        updateBrandSpend(campaign.brand_id, amount)
+    end if
+end function
+
+function updateBrandSpend(brand_id, amount):
+    brand = findBrand(brand_id)
+    if brand exists:
+        brand.daily_spend += amount
+        brand.monthly_spend += amount
+        
+        // Check if budgets are exceeded
+        if brand.daily_spend >= brand.daily_budget or brand.monthly_spend >= brand.monthly_budget:
+            for each campaign in brand.campaigns:
+                campaign.is_active = false
+            end for
+        end if
+    end if
+end function
+
+// 2. CHECK BUDGETS
+function checkBudgets():
+    for each brand in getAllBrands():
+        if brand.daily_spend >= brand.daily_budget or brand.monthly_spend >= brand.monthly_budget:
+            for each campaign in brand.campaigns:
+                campaign.is_active = false
+            end for
+        end if
+    end for
+end function
+
+// 3. RESET DAILY BUDGETS
+function resetDailyBudgets():
+    for each brand in getAllBrands():
+        brand.daily_spend = 0.0
+        
+        // Reactivate campaigns if monthly budget is not exceeded
+        if brand.monthly_spend < brand.monthly_budget:
+            for each campaign in brand.campaigns:
+                campaign.is_active = true
+            end for
+        end if
+    end for
+end function
+
+// 4. RESET MONTHLY BUDGETS
+function resetMonthlyBudgets():
+    for each brand in getAllBrands():
+        brand.monthly_spend = 0.0
+        brand.daily_spend = 0.0
+        
+        // Reactivate all campaigns
+        for each campaign in brand.campaigns:
+            campaign.is_active = true
+        end for
+    end for
+end function
+
+// 5. MANAGE DAYPARTING
+function manageDayparting():
+    current_time = getCurrentTime()
+    
+    for each campaign in getCampaignsWithDayparting():
+        // Skip if brand budget is exceeded
+        brand = campaign.brand
+        if brand.daily_spend >= brand.daily_budget or brand.monthly_spend >= brand.monthly_budget:
+            continue
+        end if
+        
+        // Check if current time is within active hours
+        is_within_hours = false
+        
+        if campaign.start_hour <= campaign.end_hour:
+            // Normal case (e.g., 9:00 - 17:00)
+            is_within_hours = (campaign.start_hour <= current_time <= campaign.end_hour)
+        else:
+            // Overnight case (e.g., 22:00 - 6:00)
+            is_within_hours = (current_time >= campaign.start_hour OR current_time <= campaign.end_hour)
+        end if
+        
+        campaign.is_active = is_within_hours
+    end for
+end function
+
+// SCHEDULED TASKS
+
+// Run at midnight every day
+scheduleDailyTask(resetDailyBudgets, "00:00")
+
+// Run at midnight on the 1st of each month
+scheduleMonthlyTask(resetMonthlyBudgets, "01 00:00")
+
+// Run every 5 minutes
+scheduleRecurringTask(checkBudgets, "*/5 minutes")
+
+// Run every 15 minutes
+scheduleRecurringTask(manageDayparting, "*/15 minutes")

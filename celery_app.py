@@ -1,7 +1,6 @@
 from celery import Celery
 from celery.schedules import crontab
 import datetime
-from sqlalchemy.orm import Session
 from database import SessionLocal
 from models import Brand, Campaign
 from crud import reset_daily_budgets, reset_monthly_budgets, update_campaign_status, update_brand_spend

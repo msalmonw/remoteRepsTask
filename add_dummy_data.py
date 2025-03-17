@@ -1,7 +1,5 @@
-from datetime import datetime, time
-from sqlalchemy.orm import Session
+from datetime import time
 from database import SessionLocal, init_db
-from models import Brand, Campaign
 from crud import create_brand, create_campaign
 
 def setup_test_data():
